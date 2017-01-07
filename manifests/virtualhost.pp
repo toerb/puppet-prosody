@@ -3,6 +3,7 @@ define prosody::virtualhost (
   $ensure    = present,
   $ssl_key   = undef,
   $ssl_cert  = undef,
+  $copy_ssl  = true,
   $components= {},
 ) {
   include prosody
@@ -16,6 +17,7 @@ define prosody::virtualhost (
   }
 
   if (($ssl_key != undef) and ($ssl_cert != undef)) {
+   if $copy_ssl {
     # Copy the provided sources to prosody certs folder
     $prosody_ssl_key  = "/etc/prosody/certs/${name}.key"
     $prosody_ssl_cert = "/etc/prosody/certs/${name}.cert"
@@ -23,13 +25,29 @@ define prosody::virtualhost (
     file {
       $prosody_ssl_key:
         source => $ssl_key,
+        mode   => '0640',
         owner  => $::prosody::user,
         group  => $::prosody::group;
       $prosody_ssl_cert:
         source => $ssl_cert,
+        mode   => '0644',
         owner  => $::prosody::user,
         group  => $::prosody::group;
     }
+   } else {
+    # use ssl key in place
+    $prosody_ssl_key  = "$ssl_key"
+    $prosody_ssl_cert = "$ssl_cert"
+
+    file {
+      $prosody_ssl_key:
+        mode   => '0640',
+        group  => $::prosody::group;
+      $prosody_ssl_cert:
+        mode   => '0644',
+        group  => $::prosody::group;
+    }
+   }
 
     $config_requires = [File[$ssl_key], File[$ssl_cert], Class['::prosody::package']]
   }
