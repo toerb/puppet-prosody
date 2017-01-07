@@ -5,6 +5,8 @@ define prosody::virtualhost (
   $ssl_cert  = undef,
   $components= {},
 ) {
+  include prosody
+
   # Check if SSL set correctly
   if (($ssl_key != undef) and ($ssl_cert == undef)) {
     fail('The prosody::virtualhost type needs both ssl_key *and* ssl_cert set')
