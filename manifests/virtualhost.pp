@@ -3,6 +3,7 @@ define prosody::virtualhost (
   $ensure    = present,
   $ssl_key   = undef,
   $ssl_cert  = undef,
+  $ssl_letsencrypt = false,
   $copy_ssl  = true,
   $components= {},
 ) {
@@ -53,7 +54,11 @@ define prosody::virtualhost (
     }
    }
 
+   if $ssl_letsencrypt {
+    $config_requires = [Letsencrypt::Certonly[$name], Class['::prosody::package']]
+   } else {
     $config_requires = [File[$ssl_key], File[$ssl_cert], Class['::prosody::package']]
+   }
   }
   else {
     $config_requires = Class['::prosody::package']
