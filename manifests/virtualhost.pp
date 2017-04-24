@@ -3,7 +3,12 @@ define prosody::virtualhost (
   $ensure    = present,
   $ssl_key   = undef,
   $ssl_cert  = undef,
+  $ssl_letsencrypt = false,
+  $copy_ssl  = true,
+  $components= {},
 ) {
+  include prosody
+
   # Check if SSL set correctly
   if (($ssl_key != undef) and ($ssl_cert == undef)) {
     fail('The prosody::virtualhost type needs both ssl_key *and* ssl_cert set')
@@ -13,6 +18,7 @@ define prosody::virtualhost (
   }
 
   if (($ssl_key != undef) and ($ssl_cert != undef)) {
+   if $copy_ssl {
     # Copy the provided sources to prosody certs folder
     $prosody_ssl_key  = "/etc/prosody/certs/${name}.key"
     $prosody_ssl_cert = "/etc/prosody/certs/${name}.cert"
@@ -20,15 +26,39 @@ define prosody::virtualhost (
     file {
       $prosody_ssl_key:
         source => $ssl_key,
+        links  => follow,
+        mode   => '0640',
         owner  => $::prosody::user,
         group  => $::prosody::group;
       $prosody_ssl_cert:
         source => $ssl_cert,
+        links  => follow,
+        mode   => '0644',
         owner  => $::prosody::user,
         group  => $::prosody::group;
     }
+   } else {
+    # use ssl key in place
+    $prosody_ssl_key  = "$ssl_key"
+    $prosody_ssl_cert = "$ssl_cert"
 
+    file {
+      $prosody_ssl_key:
+        links  => follow,
+        mode   => '0640',
+        group  => $::prosody::group;
+      $prosody_ssl_cert:
+        links  => follow,
+        mode   => '0644',
+        group  => $::prosody::group;
+    }
+   }
+
+   if $ssl_letsencrypt {
+    $config_requires = [Letsencrypt::Certonly[$name], Class['::prosody::package']]
+   } else {
     $config_requires = [File[$ssl_key], File[$ssl_cert], Class['::prosody::package']]
+   }
   }
   else {
     $config_requires = Class['::prosody::package']
